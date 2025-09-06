@@ -144,7 +144,11 @@ function App() {
   }, [API_BASE])
 
   return (
-    <div className="app-container">
+    <>
+      <header className="topbar">
+        <div className="brand">Photo Classification App</div>
+      </header>
+      <div className="app-container">
       <nav className="tag-rail">
         <div className="tag-rail-header">Tags</div>
         <button
@@ -248,6 +252,7 @@ function App() {
         </section>
       </main>
     </div>
+    </>
   )
 }
 

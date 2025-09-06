@@ -6,6 +6,7 @@
   min-height: 44px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 16px;
   background: #0f172a;
   color: #fff;
@@ -16,6 +17,27 @@
   font-weight: 800;
   letter-spacing: 0.2px;
 }
+
+.topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  cursor: pointer;
+}
+.upload-btn:hover { background: rgba(255,255,255,0.14); }
+.upload-btn:disabled { opacity: 0.6; cursor: default; }
+.upload-text { font-weight: 600; }
 
 .app-container {
   display: flex;

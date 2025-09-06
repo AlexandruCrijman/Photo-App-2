@@ -12,6 +12,7 @@ function App() {
 
   const [activeTag, setActiveTag] = useState(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
 
   const filteredPhotos = useMemo(() => {
     if (!activeTag) return photos
@@ -147,6 +148,46 @@ function App() {
     <>
       <header className="topbar">
         <div className="brand">Photo Classification App</div>
+        <div className="topbar-actions">
+          <input
+            id="file-input"
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              try {
+                setIsUploading(true)
+                const fd = new FormData()
+                fd.append('photo', file)
+                const resp = await fetch(`${API_BASE}/photos`, { method: 'POST', body: fd })
+                if (!resp.ok) throw new Error('Upload failed')
+                const created = await resp.json()
+                setPhotos((prev) => [created, ...prev])
+                setTagsById((prev) => ({ ...prev, [created.id]: created.tags || [] }))
+                setSelectedIndex(0)
+              } catch (err) {
+                console.error(err)
+              } finally {
+                setIsUploading(false)
+                e.target.value = ''
+              }
+            }}
+          />
+          <button
+            className="upload-btn"
+            onClick={() => document.getElementById('file-input')?.click()}
+            disabled={isUploading}
+            title={isUploading ? 'Uploading…' : 'Upload photo'}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 16V4m0 0l-4 4m4-4l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="upload-text">{isUploading ? 'Uploading…' : 'Upload'}</span>
+          </button>
+        </div>
       </header>
       <div className="app-container">
       <nav className="tag-rail">

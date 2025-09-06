@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { initializeDatabase, pool, listPhotosWithTags, listAllTagsWithCounts, getPhotoWithTags } from './db.js';
+import archiver from 'archiver';
 
 dotenv.config();
 
@@ -126,6 +127,48 @@ app.delete('/photos/:photoId/tags', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to remove tag' });
+  }
+});
+
+// Download all photos for a given tag as a ZIP
+app.get('/download', async (req, res) => {
+  try {
+    const { tag } = req.query;
+    if (!tag || typeof tag !== 'string' || !tag.trim()) {
+      return res.status(400).json({ error: 'tag query required' });
+    }
+    const normalized = tag.trim();
+    const { rows } = await pool.query(
+      `SELECT p.filename
+       FROM photos p
+       JOIN photo_tags pt ON pt.photo_id = p.id
+       JOIN tags t ON t.id = pt.tag_id
+       WHERE LOWER(t.name) = LOWER($1)
+       ORDER BY p.id DESC`,
+      [normalized]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No photos with this tag' });
+    }
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="photos_${normalized}.zip"`);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.on('error', (err) => {
+      console.error(err);
+      res.status(500).end();
+    });
+    archive.pipe(res);
+    for (const r of rows) {
+      const filePath = path.join(uploadsDir, r.filename);
+      if (fs.existsSync(filePath)) {
+        archive.file(filePath, { name: r.filename });
+      }
+    }
+    await archive.finalize();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to prepare download' });
   }
 });
 

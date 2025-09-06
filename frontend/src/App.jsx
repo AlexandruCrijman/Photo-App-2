@@ -152,6 +152,35 @@ function App() {
       <header className="topbar">
         <div className="brand">Photo Classification App</div>
         <div className="topbar-actions">
+          <button
+            className="download-btn"
+            onClick={async () => {
+              if (!activeTag) return
+              try {
+                const resp = await fetch(`${API_BASE}/download?tag=${encodeURIComponent(activeTag)}`)
+                if (!resp.ok) throw new Error('Download failed')
+                const blob = await resp.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `photos_${activeTag}.zip`
+                document.body.appendChild(a)
+                a.click()
+                a.remove()
+                URL.revokeObjectURL(url)
+              } catch (err) {
+                console.error(err)
+              }
+            }}
+            disabled={!activeTag}
+            title={activeTag ? `Download all photos tagged '${activeTag}'` : 'Select a tag to enable download'}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 4v10m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M20 20H4a2 2 0 0 1-2-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="upload-text">Download</span>
+          </button>
           <input
             id="file-input"
             type="file"

@@ -13,6 +13,9 @@ function App() {
   const [activeTag, setActiveTag] = useState(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
+  const [isBulkUploading, setIsBulkUploading] = useState(false)
+  const [bulkTotal, setBulkTotal] = useState(0)
+  const [bulkDone, setBulkDone] = useState(0)
 
   const filteredPhotos = useMemo(() => {
     if (!activeTag) return photos
@@ -153,24 +156,45 @@ function App() {
             id="file-input"
             type="file"
             accept="image/*"
+            multiple
             style={{ display: 'none' }}
             onChange={async (e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
+              const files = Array.from(e.target.files || [])
+              if (!files.length) return
+              const capped = files.slice(0, 100)
+              setIsBulkUploading(true)
+              setBulkTotal(capped.length)
+              setBulkDone(0)
+              setIsUploading(true)
               try {
-                setIsUploading(true)
-                const fd = new FormData()
-                fd.append('photo', file)
-                const resp = await fetch(`${API_BASE}/photos`, { method: 'POST', body: fd })
-                if (!resp.ok) throw new Error('Upload failed')
-                const created = await resp.json()
-                setPhotos((prev) => [created, ...prev])
-                setTagsById((prev) => ({ ...prev, [created.id]: created.tags || [] }))
+                const concurrency = Math.min(6, capped.length)
+                let index = 0
+                const uploadOne = async (file) => {
+                  const fd = new FormData()
+                  fd.append('photo', file)
+                  const resp = await fetch(`${API_BASE}/photos`, { method: 'POST', body: fd })
+                  if (!resp.ok) throw new Error('Upload failed')
+                  const created = await resp.json()
+                  setPhotos((prev) => [created, ...prev])
+                  setTagsById((prev) => ({ ...prev, [created.id]: created.tags || [] }))
+                  setBulkDone((d) => d + 1)
+                }
+                const worker = async () => {
+                  while (true) {
+                    const i = index
+                    if (i >= capped.length) break
+                    index = i + 1
+                    const file = capped[i]
+                    try { await uploadOne(file) } catch (err) { console.error(err) }
+                  }
+                }
+                await Promise.all(Array.from({ length: concurrency }, worker))
                 setSelectedIndex(0)
               } catch (err) {
                 console.error(err)
               } finally {
                 setIsUploading(false)
+                setIsBulkUploading(false)
                 e.target.value = ''
               }
             }}
@@ -293,6 +317,15 @@ function App() {
         </section>
       </main>
     </div>
+    {isBulkUploading && (
+      <div className="modal-overlay" role="alert" aria-live="assertive">
+        <div className="modal-card">
+          <div className="modal-title">Uploading Photos</div>
+          <div className="modal-subtitle">Photos: {bulkDone}/{bulkTotal}</div>
+          <div className="progress-outer"><div className="progress-inner" style={{ width: `${Math.min(100, Math.round((bulkDone / Math.max(1, bulkTotal)) * 100))}%` }} /></div>
+        </div>
+      </div>
+    )}
     </>
   )
 }

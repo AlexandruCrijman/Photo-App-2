@@ -89,3 +89,69 @@
 .value {
   font-weight: 500;
 }
+
+/* Tags input */
+.tags-row {
+  align-items: start;
+}
+
+.tags-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef0ff;
+  color: #3741a0;
+  font-weight: 600;
+}
+
+.tag-remove {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #5a64d3;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.tag-text {
+  flex: 1;
+  min-width: 140px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  padding: 4px 2px;
+}
+
+.suggestions {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+}
+
+.suggestion-btn {
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  cursor: pointer;
+}
+.suggestion-btn:hover { background: #f3f4ff; }

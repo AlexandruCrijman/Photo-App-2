@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 function App() {
@@ -22,6 +22,31 @@ function App() {
 
   const [selectedIndex, setSelectedIndex] = useState(0)
   const selected = photos[selectedIndex]
+
+  const handleArrowNavigation = useCallback(
+    (event) => {
+      if (event.key === 'ArrowRight') {
+        setSelectedIndex((currentIndex) =>
+          Math.min(currentIndex + 1, photos.length - 1)
+        )
+      } else if (event.key === 'ArrowLeft') {
+        setSelectedIndex((currentIndex) => Math.max(currentIndex - 1, 0))
+      }
+    },
+    [photos.length]
+  )
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleArrowNavigation)
+    return () => window.removeEventListener('keydown', handleArrowNavigation)
+  }, [handleArrowNavigation])
+
+  useEffect(() => {
+    const selectedElement = document.querySelector('.thumb-btn.selected')
+    if (selectedElement && 'scrollIntoView' in selectedElement) {
+      selectedElement.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    }
+  }, [selectedIndex])
 
   return (
     <div className="app-container">

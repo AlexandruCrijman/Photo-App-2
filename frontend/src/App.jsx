@@ -20,6 +20,10 @@ function App() {
     []
   )
 
+  // Tags state per photo id (must be declared before usage)
+  const [tagsById, setTagsById] = useState({})
+  const [tagInput, setTagInput] = useState('')
+
   const [activeTag, setActiveTag] = useState(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
 
@@ -35,10 +39,6 @@ function App() {
   }, [filteredPhotos.length, selectedIndex])
 
   const selected = filteredPhotos[selectedIndex]
-
-  // Tags state per photo id
-  const [tagsById, setTagsById] = useState({})
-  const [tagInput, setTagInput] = useState('')
 
   const selectedTags = useMemo(() => tagsById[selected?.id] || [], [tagsById, selected])
   const allTags = useMemo(() => {

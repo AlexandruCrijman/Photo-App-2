@@ -5,6 +5,35 @@
   width: 100vw;
 }
 
+.tag-rail {
+  width: 180px;
+  border-right: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.tag-rail-header {
+  font-weight: 700;
+  padding: 12px 12px 4px;
+  color: #555;
+}
+
+.tag-rail-item {
+  text-align: left;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+.tag-rail-item:hover { background: #f3f4ff; }
+.tag-rail-item.active {
+  background: #eef0ff;
+  border-left-color: #646cff;
+  font-weight: 700;
+}
+
 .sidebar {
   width: min(30vw, 420px);
   min-width: 280px;

@@ -20,8 +20,21 @@ function App() {
     []
   )
 
+  const [activeTag, setActiveTag] = useState(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const selected = photos[selectedIndex]
+
+  const filteredPhotos = useMemo(() => {
+    if (!activeTag) return photos
+    return photos.filter((p) => (tagsById[p.id] || []).some((t) => t.toLowerCase() === activeTag.toLowerCase()))
+  }, [activeTag, photos, tagsById])
+
+  useEffect(() => {
+    if (selectedIndex >= filteredPhotos.length) {
+      setSelectedIndex(0)
+    }
+  }, [filteredPhotos.length, selectedIndex])
+
+  const selected = filteredPhotos[selectedIndex]
 
   // Tags state per photo id
   const [tagsById, setTagsById] = useState({})
@@ -85,13 +98,13 @@ function App() {
     (event) => {
       if (event.key === 'ArrowRight') {
         setSelectedIndex((currentIndex) =>
-          Math.min(currentIndex + 1, photos.length - 1)
+          Math.min(currentIndex + 1, filteredPhotos.length - 1)
         )
       } else if (event.key === 'ArrowLeft') {
         setSelectedIndex((currentIndex) => Math.max(currentIndex - 1, 0))
       }
     },
-    [photos.length]
+    [filteredPhotos.length]
   )
 
   useEffect(() => {
@@ -108,9 +121,31 @@ function App() {
 
   return (
     <div className="app-container">
+      <nav className="tag-rail">
+        <div className="tag-rail-header">Tags</div>
+        <button
+          className={`tag-rail-item ${!activeTag ? 'active' : ''}`}
+          onClick={() => setActiveTag(null)}
+        >
+          All
+        </button>
+        {allTags.map((t) => (
+          <button
+            key={t}
+            className={`tag-rail-item ${activeTag && activeTag.toLowerCase() === t.toLowerCase() ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTag((curr) => (curr && curr.toLowerCase() === t.toLowerCase() ? null : t))
+              setSelectedIndex(0)
+            }}
+            title={t}
+          >
+            {t}
+          </button>
+        ))}
+      </nav>
       <aside className="sidebar">
         <div className="thumb-grid">
-          {photos.map((p, idx) => (
+          {filteredPhotos.map((p, idx) => (
             <button
               key={p.id}
               className={`thumb-btn ${idx === selectedIndex ? 'selected' : ''}`}

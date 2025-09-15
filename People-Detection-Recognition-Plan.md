@@ -3,28 +3,57 @@
 ## Overview
 Monolithic app (React + Vite frontend, Node/Express backend, PostgreSQL DB) with AI features for description, secure share links, and people detection/recognition (SCRFD + ArcFace + OSNet).
 
+## Objective
+Deliver a production-ready “People detection and recognition” feature that can reliably find all people in wedding-scale photos (crowded scenes), render non-destructive overlays in the preview, and recognize individuals by comparing detections against event-scoped tags. The system must:
+- Handle 1.8k+ images efficiently (batch uploads, pagination, caching, and incremental builds).
+- Use open-source models locally (SCRFD + ArcFace + OSNet) to minimize cost and avoid external dependencies, with optional GPT-5 flows for descriptions and structured insights.
+- Preserve safety and scope separation (events; secure personal links) while remaining responsive under heavy user interactions.
+
 ## Remaining TODOs
-- Face/People pipeline
-  - Implement ArcFace embeddings extraction for detected faces; persist in `faces` and `person_embeddings`.
-  - Implement OSNet appearance embeddings; fuse with ArcFace for recognition robustness (multi-angle, clothing).
-  - Add recognition endpoint to associate detections to existing tags; persist `recognized_tag_id` and fused scores.
-  - Batch/maintenance job to rebuild/freshen `person_embeddings` when tags/photos change.
-  - Tuning at wedding scale: thresholds, NMS, dynamic scaling, cap processed faces, perf QA.
-- Frontend UI
-  - Overlay: ensure canvas boxes render reliably for large images; add hover highlights and confidence tooltips.
-  - Details pane: show list of recognized persons under description; allow manual resolve when empty/low confidence.
-  - Keyboard UX: continue navigation after mark-complete; keep multi-select behaviors stable.
-  - Share Links Manager: polish bulk generate UX feedback and error reporting.
-- Events lifecycle
-  - Ensure event delete handles large datasets without timeouts (chunk deletes, background job option).
-  - Improve event switching notifications/refresh flows.
-- Gallery
-  - Pagination/cursor flow finalized; rebuild strategy after mutations; caching headers; preloading.
-- Tests (at least 4 per step)
-  - Face embeddings, recognition, and fusion correctness (fixture-based with tolerance).
-  - Admin vs person-scope guards on new endpoints.
-  - Stress tests: bulk uploads (2k), bulk zip download by tag, bulk share-link generate.
-  - UI integration tests (smoke) for detection overlay and recognized list render.
+- Step 1: DB models (completed)
+  - Add `faces` with bbox, landmarks, orientation (yaw/pitch/roll), embeddings, confidence, recognized tag, timestamps.
+  - Add `person_embeddings` for durable per-tag vectors; link to the `faces` row where the vector originated.
+  - Create indices for query performance; enforce event scoping.
+
+- Step 2: Detect endpoint and persistence (completed)
+  - Endpoint `POST /photos/:photoId/faces:detect` to run detection and store results in `faces`.
+  - Adds server-side timeout (`DETECT_TIMEOUT_MS`) to prevent hanging requests.
+  - Health checks and tests for 404s, permissions, and person-scope guards.
+
+- Step 3: Overlay UI (in progress)
+  - Frontend canvas overlay draws red rectangles over preview without altering the source image.
+  - Scale/position correctly against the preview’s rendered dimensions; redraw on resize/selection.
+  - Enhance with hover states (thicker stroke or subtle glow), confidences, and toggle visibility.
+
+- Step 4: Recognition + fusion (pending)
+  - Extract ArcFace embeddings per detected face; extract OSNet appearance embeddings; compute a fused similarity.
+  - Recognition endpoint assigns `recognized_tag_id` where similarity passes tuned thresholds; persist fused score.
+  - Add rebuild job to update `person_embeddings` when tags/photos change (new photos strengthen the tag’s representation).
+
+- Step 5: Gallery rebuild and maintenance (pending)
+  - Cursor-based pagination finalized; efficient rebuild after mutations (upload/delete/retag/recognize).
+  - Client preloading and caching for smooth navigation; reduce reflows.
+
+- Step 6: Details UI for recognized persons (pending)
+  - Show recognized persons under description; link to tag filters; provide manual override controls.
+  - Support multi-select “apply recognition” and quick resolve for low-confidence detections.
+
+- Step 7: Tuning and performance QA (pending)
+  - Tune thresholds per scene density; calibrate NMS per stride; cap faces per image (e.g., 150) with smart sampling.
+  - Validate performance on 1.8k+ images; measure P95 latencies for detect/list/describe/recognize; size caches.
+
+- Frontend polish (ongoing)
+  - Keyboard UX continuity (mark-complete moves to next; selection consistency across arrows/shift/ctrl).
+  - Share Links Manager UX—clear bulk results, copy/revoke feedback, skip-existing behavior messaging.
+
+- Events lifecycle hardening (ongoing)
+  - Chunked deletes for large events; background job option; progress UI and post-completion refresh.
+  - Safer event switch with confirmation when there are unsaved changes.
+
+- Tests (expand breadth and depth)
+  - Face embeddings/recognition/fusion correctness; numeric tolerances; confusion-matrix summaries.
+  - Stress tests: 2k uploads, mass ZIP by tag, bulk share-link generate; ensure DB integrity and timeouts are avoided.
+  - UI smoke: overlay presence and hitbox alignment across viewport sizes; recognized list render and manual override.
 
 ## Current Issues (to address next)
 - Health endpoint intermittently unreachable (curl shows 000) while dev logs print “API listening”
@@ -91,11 +120,22 @@ npm test --silent | cat
 - Performance: cache thumbnails, batch API calls, rate-limit heavy endpoints, and ensure DB indices exist for faces/person_embeddings.
 
 ## Troubleshooting
-- Health 000 status
-  - Ensure server actually running (`lsof -iTCP:4000 -sTCP:LISTEN`). Try `node src/index.js` instead of nodemon.
+- Health 000 status (requests hang, no status)
+  - Confirm listener exists: `lsof -n -P -iTCP:4000 -sTCP:LISTEN` and `nc -vz 127.0.0.1 4000`.
+  - Run server without nodemon: `node src/index.js` (nodemon can flap if watching large folders).
   - Unset proxies: `unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy NO_PROXY no_proxy`.
-- SCRFD model errors
-  - Verify file path and permissions; prefer `scrfd_2.5g_bnkps.onnx` or `scrfd_500m_bnkps.onnx`.
-  - Confirm ONNX opset compatibility with installed `onnxruntime-node`.
-- Detect returns 0 results
-  - Try a portrait image with large faces; lower threshold; verify decoding; test alternative SCRFD model.
+  - Check for long-running handlers; add start/end logs around suspect endpoints; ensure every code path calls `res.json(...)` or `res.end()`.
+
+- Detect endpoint hangs or never returns
+  - Use client timeout to prove the socket hangs: `curl -m 10 -v -X POST ...`.
+  - Server-side timeout: set `DETECT_TIMEOUT_MS` (e.g., 8000). On timeout expect HTTP 504 JSON response.
+  - Add route-level logs to verify entry/exit and timing.
+
+- SCRFD model errors (protobuf parsing / 0 boxes)
+  - Prefer official `scrfd_2.5g_bnkps.onnx` or `scrfd_500m_bnkps.onnx` under `backend/models/`; set `SCRFD_MODEL_PATH` accordingly.
+  - Ensure model and ORT versions are compatible; consider pinning `onnxruntime-node` if needed.
+  - Replace naive output parsing with proper multi-head decode (per stride 8/16/32) and NMS; verify tensor names and shapes.
+
+- Tests pass but don’t validate real images
+  - Replace tiny placeholder JPEG with a real portrait fixture; assert count ≥ expected; compare bbox structure.
+  - Add regression fixtures for crowded scenes to validate NMS and caps.

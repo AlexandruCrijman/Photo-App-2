@@ -1,0 +1,6 @@
+uploads/
+models/
+*.onnx
+*.zip
+*.log
+.env

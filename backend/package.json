@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "NODE_ENV=test node --test",
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "migrate": "node -e \"import('./src/db.js').then(m=>m.initializeDatabase()).then(()=>console.log('DB ready')).catch(e=>{console.error(e);process.exit(1)})\""
@@ -15,15 +15,19 @@
   "type": "module",
   "dependencies": {
     "archiver": "^7.0.1",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "multer": "^2.0.2",
+    "onnxruntime-node": "^1.22.0-rev",
     "openai": "^5.19.1",
     "pg": "^8.16.3",
     "sharp": "^0.34.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "supertest": "^6.3.4"
   }
 }
